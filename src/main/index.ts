@@ -1,10 +1,11 @@
-import { app, shell, BrowserWindow, ipcMain, Tray } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
-let tray: Tray | null = null
-
 // 自定义逻辑功能
+let tray: Tray | null = null
+let isUserQuitting = false
+
 import { startClipboardWatcher } from './clipboard'
 
 function createWindow(): void {
@@ -17,7 +18,8 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
-    }
+    },
+    icon: join(app.getAppPath(), 'resources/icons/icon.ico')
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -27,6 +29,13 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+
+  mainWindow.on('close', (event) => {
+    if (process.platform !== 'darwin' && !isUserQuitting) {
+      event.preventDefault()
+      mainWindow.hide()
+    }
   })
 
   // HMR for renderer base on electron-vite cli.
@@ -48,8 +57,36 @@ app.whenReady().then(() => {
   // 例如：监听剪贴板变化并处理文本
   startClipboardWatcher()
 
+  // 设置系统托盘图标
+  // 注意：在 macOS 上，托盘图标会显示在菜单栏中
+  // 在 Windows 和 Linux 上，托盘图标会显示在任务栏的系统托盘区域
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '显示主界面',
+      click: () => {
+        const win = BrowserWindow.getAllWindows()[0]
+        if (win) win.show()
+        else createWindow()
+      }
+    },
+    {
+      label: '退出',
+      click: () => {
+        isUserQuitting = true
+        app.quit()
+      }
+    }
+  ])
   tray = new Tray(join(app.getAppPath(), 'resources/icons/icon.ico'))
+  tray.setContextMenu(contextMenu)
   tray.setToolTip('Clipboard Tailor')
+  tray.on('click', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) {
+      win.show()
+      win.focus()
+    }
+  })
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
