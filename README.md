@@ -1,5 +1,7 @@
 # Clipboard Tailor
 
+![image](resources/icons/icon.svg)
+
 Clipboard Tailor 是一个基于 Electron + Vue3 + TypeScript 的桌面应用，支持自定义正则表达式处理剪贴板内容，并通过托盘图标和系统通知进行交互。
 
 编写该工具的起因是百度网盘的分享功能会自带一长串的广告字符，每次都要手动清理令人烦不胜烦。
