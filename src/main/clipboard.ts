@@ -1,18 +1,20 @@
-import { clipboard } from 'electron'
+import { clipboard, Notification } from 'electron'
 import { BrowserWindow } from 'electron/main'
 
 let lastText = ''
 
+function showTrayNotification(title: string, body: string): void {
+  const notification = new Notification({ title, body })
+  notification.show()
+}
+
 function processText(text: string): string {
-  // ÕâÀïÐ´ÄãµÄ×Ö·û´®´¦Àí¹æÔò£¬±ÈÈçÈ¥³ý¿Õ¸ñ
   const match = text.match(/https:\/\/[^\s]+/)
   const url = match ? match[0] : ''
 
   if (url) {
-    // Èç¹ûÆ¥Åäµ½ URL£¬Ôò·µ»Ø URL
     return url
   } else {
-    // Èç¹ûÃ»ÓÐÆ¥Åäµ½ URL£¬Ôò·µ»ØÔ­ÎÄ±¾
     return text
   }
 }
@@ -26,9 +28,16 @@ export function startClipboardWatcher(): void {
       if (processed !== text) {
         clipboard.writeText(processed)
         lastText = processed
-        // Í¨ÖªäÖÈ¾½ø³Ì
+        // å‘é€é€šçŸ¥
+        showTrayNotification(
+          'å‰ªè´´æ¿å·²æ›´æ–°',
+          `åŽŸå§‹å­—ç¬¦ä¸²:\n ${text} \n\n å¤„ç†åŽçš„å­—ç¬¦ä¸²:\n ${processed}`
+        )
         BrowserWindow.getAllWindows().forEach((win) => {
-          win.webContents.send('clipboard-updated', processed)
+          win.webContents.send('clipboard-updated', {
+            original: text,
+            processed
+          })
         })
       } else {
         lastText = text

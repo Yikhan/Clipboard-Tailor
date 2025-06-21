@@ -1,18 +1,17 @@
 import { app, shell, BrowserWindow, ipcMain, Tray, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { startClipboardWatcher } from './clipboard'
 
 // 自定义逻辑功能
 let tray: Tray | null = null
 let isUserQuitting = false
 
-import { startClipboardWatcher } from './clipboard'
-
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 400,
-    height: 300,
+    height: 200,
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
