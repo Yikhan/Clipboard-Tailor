@@ -19,8 +19,13 @@ function processText(text: string): string {
   }
 }
 
-export function startClipboardWatcher(): void {
+export function startClipboardWatcher(getIsUsePaused: () => boolean): void {
   setInterval(() => {
+    // 如果用户暂停了功能，则不处理剪贴板
+    if (getIsUsePaused()) {
+      return
+    }
+    // 检查剪贴板中的文本
     const text = clipboard.readText()
     if (text && text !== lastText) {
       const processed = processText(text)

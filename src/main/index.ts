@@ -6,6 +6,18 @@ import { startClipboardWatcher } from './clipboard'
 // 自定义逻辑功能
 let tray: Tray | null = null
 let isUserQuitting = false
+let isUserPaused = false
+
+function getIsUsePaused(): boolean {
+  return isUserPaused
+}
+
+function updateWindowTitle(): void {
+  const title = isUserPaused ? 'Clipboard Tailor (Paused)' : 'Clipboard Tailor'
+  BrowserWindow.getAllWindows().forEach((win) => {
+    win.setTitle(title)
+  })
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -46,19 +58,8 @@ function createWindow(): void {
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
-  // 触发自定义逻辑功能
-  // 例如：监听剪贴板变化并处理文本
-  startClipboardWatcher()
-
-  // 设置系统托盘图标
-  // 注意：在 macOS 上，托盘图标会显示在菜单栏中
-  // 在 Windows 和 Linux 上，托盘图标会显示在任务栏的系统托盘区域
+// 动态生成菜单
+function updateTrayMenu(): void {
   const contextMenu = Menu.buildFromTemplate([
     {
       label: '显示主界面',
@@ -69,6 +70,14 @@ app.whenReady().then(() => {
       }
     },
     {
+      label: isUserPaused ? '恢复捕获' : '暂停捕获',
+      click: () => {
+        isUserPaused = !isUserPaused
+        updateTrayMenu()
+        updateWindowTitle()
+      }
+    },
+    {
       label: '退出',
       click: () => {
         isUserQuitting = true
@@ -76,8 +85,23 @@ app.whenReady().then(() => {
       }
     }
   ])
+  tray?.setContextMenu(contextMenu)
+}
+
+// This method will be called when Electron has finished
+// initialization and is ready to create browser windows.
+// Some APIs can only be used after this event occurs.
+app.whenReady().then(() => {
+  // Set app user model id for windows
+  electronApp.setAppUserModelId('com.electron')
+  // 触发自定义逻辑功能
+  // 例如：监听剪贴板变化并处理文本
+  startClipboardWatcher(getIsUsePaused)
+
+  // 设置系统托盘图标
+  // 注意：在 macOS 上，托盘图标会显示在菜单栏中
+  // 在 Windows 和 Linux 上，托盘图标会显示在任务栏的系统托盘区域
   tray = new Tray(join(app.getAppPath(), 'resources/icons/icon.ico'))
-  tray.setContextMenu(contextMenu)
   tray.setToolTip('Clipboard Tailor')
   tray.on('click', () => {
     const win = BrowserWindow.getAllWindows()[0]
@@ -86,7 +110,8 @@ app.whenReady().then(() => {
       win.focus()
     }
   })
-
+  // 创建 or 更新托盘菜单
+  updateTrayMenu()
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
