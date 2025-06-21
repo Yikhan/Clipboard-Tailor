@@ -25,6 +25,9 @@ function createWindow(): void {
     width: 400,
     height: 200,
     show: false,
+    resizable: false,
+    fullscreenable: false,
+    maximizable: false,
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

@@ -9,11 +9,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     VarButton: typeof import('@varlet/ui')['_ButtonComponent']
-    VarCell: typeof import('@varlet/ui')['_CellComponent']
-    VarDivider: typeof import('@varlet/ui')['_DividerComponent']
-    VarIcon: typeof import('@varlet/ui')['_IconComponent']
     VarInput: typeof import('@varlet/ui')['_InputComponent']
     VarSpace: typeof import('@varlet/ui')['_SpaceComponent']
-    Versions: typeof import('./src/components/Versions.vue')['default']
   }
 }
