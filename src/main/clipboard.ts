@@ -2,14 +2,16 @@ import { clipboard, Notification } from 'electron'
 import { BrowserWindow } from 'electron/main'
 
 let lastText = ''
+let intervalId: NodeJS.Timeout | null = null
 
 function showTrayNotification(title: string, body: string): void {
   const notification = new Notification({ title, body })
   notification.show()
 }
 
-function processText(text: string): string {
-  const match = text.match(/https:\/\/[^\s]+/)
+function processText(text: string, patthern: string): string {
+  const regex = new RegExp(patthern, 'g')
+  const match = text.match(regex)
   const url = match ? match[0] : ''
 
   if (url) {
@@ -19,8 +21,13 @@ function processText(text: string): string {
   }
 }
 
-export function startClipboardWatcher(getIsUsePaused: () => boolean): void {
-  setInterval(() => {
+export function startClipboardWatcher(getIsUsePaused: () => boolean, pattern: string): void {
+  if (intervalId) {
+    clearInterval(intervalId)
+    intervalId = null
+  }
+
+  intervalId = setInterval(() => {
     // 如果用户暂停了功能，则不处理剪贴板
     if (getIsUsePaused()) {
       return
@@ -28,7 +35,7 @@ export function startClipboardWatcher(getIsUsePaused: () => boolean): void {
     // 检查剪贴板中的文本
     const text = clipboard.readText()
     if (text && text !== lastText) {
-      const processed = processText(text)
+      const processed = processText(text, pattern)
 
       if (processed !== text) {
         clipboard.writeText(processed)

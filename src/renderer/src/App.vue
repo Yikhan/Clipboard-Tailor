@@ -2,7 +2,7 @@
 import { onMounted, ref, watch, reactive } from 'vue'
 import { Input as VarInputType } from '@varlet/ui'
 
-const defaultRegex = /https:pan.baidu\/\/[^\s]+/
+const defaultRegex = /https:\/\/pan.baidu.com\/s\/[^\s]+/
 const inputRegex = ref(defaultRegex.toString())
 const activeRegex = ref(defaultRegex)
 const inputRegexRef = ref<VarInputType | null>(null)
@@ -43,7 +43,7 @@ watch(inputRegex, (newValue) => {
 onMounted(() => {
   window.electron.ipcRenderer.on('clipboard-updated', (_event, result) => {
     console.log('Clipboard updated:', result)
-
+    // 调试时使用，现在UI中不显示
     clipboardResult.original = result.original
     clipboardResult.processed = result.processed
   })

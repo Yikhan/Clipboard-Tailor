@@ -97,9 +97,6 @@ function updateTrayMenu(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
-  // 触发自定义逻辑功能
-  // 例如：监听剪贴板变化并处理文本
-  startClipboardWatcher(getIsUsePaused)
 
   // 设置系统托盘图标
   // 注意：在 macOS 上，托盘图标会显示在菜单栏中
@@ -122,8 +119,10 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.on('update-pattern', (_, pattern) => {
+    // 启动剪贴板监听器
+    startClipboardWatcher(getIsUsePaused, pattern)
+  })
 
   createWindow()
 
