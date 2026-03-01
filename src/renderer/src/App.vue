@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref, watch, reactive } from 'vue'
+import { onMounted, ref, reactive } from 'vue'
 import { Input as VarInputType } from '@varlet/ui'
 
-const defaultRegex = /https:\/\/pan.baidu.com\/s\/[^\s]+/
+const defaultRegex = /pan.baidu.com\/s\/[^\s]+/
 const inputRegex = ref(defaultRegex.toString())
 const activeRegex = ref(defaultRegex)
 const inputRegexRef = ref<VarInputType | null>(null)
@@ -12,17 +12,29 @@ const clipboardResult = reactive({
 })
 let errorMessage = ref('')
 
-const sendRegex = (pattern: RegExp): void => {
-  window.electron.ipcRenderer.send('update-pattern', pattern)
+const notifySystem = (body: string, title = 'Clipboard Tailor'): void => {
+  window.electron.ipcRenderer.send('show-notification', title, body)
 }
+
+const writeProcessedToClipboard = (text: string): void => {
+  try {
+    window.electron.ipcRenderer.send('write-clipboard', text)
+    notifySystem('已将处理结果写入剪贴板: ' + text)
+  } catch (e) {
+    console.info('Clipboard write failed:', e)
+    notifySystem('写入剪贴板失败')
+  }
+}
+
 const parseRegex = (pattern: string): RegExp => {
   try {
-    const newRegex = new RegExp(pattern)
     errorMessage.value = ''
+    const newRegex = new RegExp(pattern)
     return newRegex
   } catch (e) {
     console.info('Invalid regex pattern:', e)
-    errorMessage.value = `Invalid Regex`
+    errorMessage.value = `Invalid Regex: ${e instanceof Error ? e.message : String(e)}`
+    notifySystem(errorMessage.value)
     // 返回上一次有效的正则表达式
     return activeRegex.value
   } finally {
@@ -31,24 +43,37 @@ const parseRegex = (pattern: string): RegExp => {
 }
 const onResetRegex = (): void => {
   inputRegex.value = defaultRegex.toString()
+  onApplyRegex()
 }
 
-watch(inputRegex, (newValue) => {
-  console.log('Regex input changed:', newValue)
-  const newRegex = parseRegex(newValue)
+const onApplyRegex = (): void => {
+  const newRegex = parseRegex(inputRegex.value)
   activeRegex.value = newRegex
-  sendRegex(parseRegex(newValue))
-})
+
+  if (clipboardResult.original) {
+    const match = clipboardResult.original.match(newRegex)
+    const processed = match ? match[0] : clipboardResult.original
+    clipboardResult.processed = processed
+
+    if (processed !== clipboardResult.original) {
+      writeProcessedToClipboard(processed)
+    }
+  }
+}
 
 onMounted(() => {
-  window.electron.ipcRenderer.on('clipboard-updated', (_event, result) => {
-    console.log('Clipboard updated:', result)
-    // 调试时使用，现在UI中不显示
-    clipboardResult.original = result.original
-    clipboardResult.processed = result.processed
-  })
+  window.electron.ipcRenderer.on('clipboard-updated', (_event, text: string) => {
+    console.log('Clipboard updated:', text)
+    clipboardResult.original = text
 
-  sendRegex(defaultRegex)
+    const match = text.match(activeRegex.value)
+    const processed = match ? match[0] : text
+    clipboardResult.processed = processed
+
+    if (processed !== text) {
+      writeProcessedToClipboard(processed)
+    }
+  })
 })
 </script>
 
@@ -61,6 +86,9 @@ onMounted(() => {
         placeholder="请输入正则表达式"
         :rules="() => errorMessage === '' || errorMessage"
       />
+      <var-button size="small" class="button-action" type="primary" @click="onApplyRegex">
+        应用
+      </var-button>
       <var-button size="small" class="button-reset" type="primary" @click="onResetRegex">
         重置
       </var-button>
@@ -78,6 +106,7 @@ onMounted(() => {
   width: 100%;
 }
 
+.button-action,
 .button-reset {
   align-self: center;
 }

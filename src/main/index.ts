@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, Tray, Menu } from 'electron'
+import { app, shell, BrowserWindow, Tray, Menu, ipcMain, clipboard, Notification } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { startClipboardWatcher } from './clipboard'
@@ -7,13 +7,19 @@ import { startClipboardWatcher } from './clipboard'
 let tray: Tray | null = null
 let isUserQuitting = false
 let isUserPaused = false
+const appVersion = app.getVersion()
+
+function getWindowTitle(): string {
+  const baseTitle = `Clipboard Tailor v${appVersion}`
+  return isUserPaused ? `${baseTitle} (Paused)` : baseTitle
+}
 
 function getIsUsePaused(): boolean {
   return isUserPaused
 }
 
 function updateWindowTitle(): void {
-  const title = isUserPaused ? 'Clipboard Tailor (Paused)' : 'Clipboard Tailor'
+  const title = getWindowTitle()
   BrowserWindow.getAllWindows().forEach((win) => {
     win.setTitle(title)
   })
@@ -33,7 +39,12 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     },
+    title: getWindowTitle(),
     icon: join(app.getAppPath(), 'resources/icons/icon.ico')
+  })
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.setTitle(getWindowTitle())
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -119,10 +130,25 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  ipcMain.on('update-pattern', (_, pattern) => {
-    // 启动剪贴板监听器
-    startClipboardWatcher(getIsUsePaused, pattern)
+  ipcMain.on('write-clipboard', (_event, text: string) => {
+    if (typeof text === 'string') {
+      clipboard.writeText(text)
+    }
   })
+
+  ipcMain.on('show-notification', (_event, title: string, body: string) => {
+    if (!Notification.isSupported()) {
+      return
+    }
+
+    const notification = new Notification({
+      title: title || 'Clipboard Tailor',
+      body: body || ''
+    })
+    notification.show()
+  })
+
+  startClipboardWatcher(getIsUsePaused)
 
   createWindow()
 
