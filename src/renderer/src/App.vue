@@ -3,7 +3,7 @@ import { onMounted, ref, reactive } from 'vue'
 import { Input as VarInputType } from '@varlet/ui'
 
 const defaultRegex = /pan.baidu.com\/s\/[^\s]+/
-const inputRegex = ref(defaultRegex.toString())
+const inputRegex = ref(defaultRegex.source)
 const activeRegex = ref(defaultRegex)
 const inputRegexRef = ref<VarInputType | null>(null)
 const clipboardResult = reactive({
@@ -42,7 +42,7 @@ const parseRegex = (pattern: string): RegExp => {
   }
 }
 const onResetRegex = (): void => {
-  inputRegex.value = defaultRegex.toString()
+  inputRegex.value = defaultRegex.source
   onApplyRegex()
 }
 
